@@ -1,0 +1,17 @@
+{
+  "name": "migration-engine",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev:db && concurrently -n \"api,bff,web\" -c \"bgBlue.bold,bgGreen.bold,bgYellow.bold\" --kill-others-on-fail \"npm run dev:api\" \"npm run dev:bff\" \"npm run dev:web\"",
+    "dev:db": "docker compose up mongodb -d",
+    "dev:api": "cross-env PYTHONPATH=backend venv/Scripts/python -m uvicorn app.api.main:app --reload --reload-dir backend --host 0.0.0.0 --port 8000",
+    "dev:bff": "npm --prefix bff run dev",
+    "dev:web": "npm --prefix frontend/client run dev",
+    "setup": "npm install && venv\\Scripts\\pip install -r backend/requirements.txt && npm --prefix bff install && npm --prefix frontend/client install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0"
+  }
+}
