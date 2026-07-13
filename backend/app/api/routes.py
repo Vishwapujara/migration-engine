@@ -8,7 +8,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
+import io
+import zipfile
+
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from langgraph.types import Command
 from pydantic import BaseModel
 
@@ -383,6 +387,36 @@ async def get_file_detail(job_id: str, file_path: str):
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ------------------------------------------------------------------
+# GET /api/jobs/{job_id}/download
+# ------------------------------------------------------------------
+
+@router.get("/api/jobs/{job_id}/download")
+async def download_output(job_id: str):
+    job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found.")
+    if job["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Job is not completed yet.")
+
+    out_dir = Path(job.get("output_repo_path") or "")
+    if not out_dir.exists():
+        raise HTTPException(status_code=404, detail="Output directory not found.")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file in out_dir.rglob("*"):
+            if file.is_file():
+                zf.write(file, file.relative_to(out_dir))
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=migration-{job_id[:8]}.zip"},
+    )
 
 
 # ------------------------------------------------------------------
