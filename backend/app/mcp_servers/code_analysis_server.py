@@ -7,16 +7,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 os.chdir(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-def _tool_noop():
-    return lambda f: f
-
-
-class _MCPStub:
-    tool = staticmethod(_tool_noop)
-    def run(self): pass
-
-
-mcp = _MCPStub()
+from mcp.server.fastmcp import FastMCP
 
 from app.code_analysis.registry import (
     parse_file as _parse_file,

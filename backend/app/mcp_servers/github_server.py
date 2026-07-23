@@ -15,16 +15,9 @@ os.chdir(os.path.join(os.path.dirname(__file__), "..", ".."))
 from app.config import settings
 
 
-def _tool_noop():
-    return lambda f: f
+from mcp.server.fastmcp import FastMCP
 
-
-class _MCPStub:
-    tool = staticmethod(_tool_noop)
-    def run(self): pass
-
-
-mcp = _MCPStub()
+mcp = FastMCP("GitHub Server")
 
 _GH_API = "https://api.github.com"
 

@@ -14,16 +14,9 @@ os.chdir(os.path.join(os.path.dirname(__file__), "..", ".."))
 from app.code_analysis.registry import get_extractor_for_language
 
 
-def _tool_noop():
-    return lambda f: f
+from mcp.server.fastmcp import FastMCP
 
-
-class _MCPStub:
-    tool = staticmethod(_tool_noop)
-    def run(self): pass
-
-
-mcp = _MCPStub()
+mcp = FastMCP("Validation Server")
 
 _TIMEOUT = 30  # seconds for subprocess calls
 

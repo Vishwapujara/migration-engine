@@ -11,16 +11,9 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 os.chdir(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-def _tool_noop():
-    return lambda f: f
+from mcp.server.fastmcp import FastMCP
 
-
-class _MCPStub:
-    tool = staticmethod(_tool_noop)
-    def run(self): pass
-
-
-mcp = _MCPStub()
+mcp = FastMCP("Filesystem Server")
 
 # Commands permitted in run_command — anything not in this set is rejected.
 _ALLOWED_COMMANDS: frozenset[str] = frozenset({

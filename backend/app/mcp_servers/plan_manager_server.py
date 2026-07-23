@@ -1,35 +1,15 @@
-"""Plan Manager — tracks per-job migration plans in memory + disk.
-
-Functions are called directly from graph nodes (no MCP transport needed).
-The @tool decorator is a no-op identity wrapper kept for future MCP compatibility.
-"""
+"""Plan Manager MCP Server — tracks per-job migration plans in memory + disk."""
 from __future__ import annotations
 import json
 import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Literal, TypeVar
+from typing import Literal
 
-_F = TypeVar("_F", bound=Callable)
+from mcp.server.fastmcp import FastMCP
 
-
-def _tool_noop() -> Callable[[_F], _F]:
-    """Identity decorator — functions are called directly, not via MCP transport."""
-    def decorator(func: _F) -> _F:
-        return func
-    return decorator
-
-
-class _PlanManagerStub:
-    """Stub that makes @mcp.tool() a no-op so functions remain plain callables."""
-    tool = staticmethod(_tool_noop)
-
-    def run(self) -> None:
-        print("Plan Manager: running in direct-call mode (no MCP transport).")
-
-
-mcp = _PlanManagerStub()
+mcp = FastMCP("Plan Manager Server")
 
 FileStatus = Literal["pending", "in_progress", "converted", "failed", "flagged"]
 
