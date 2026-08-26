@@ -185,14 +185,17 @@ Dependency ordering is a classic graph problem (topological sort). Building this
 ### 6. Model Context Protocol (MCP)
 **What it is:** An open standard (created by Anthropic) that defines how AI models communicate with external tools and data sources. An MCP server exposes tools that an LLM agent can discover and call.
 
-**Where it's used:** Five internal MCP servers handle specific responsibilities:
+**Where it's used:** Six internal MCP servers handle specific responsibilities:
 - `plan_manager_server` — tracks migration plan state, file statuses, retry history
 - `validation_server` — syntax and type checking
 - `code_analysis_server` — AST parsing and dependency graph queries
 - `filesystem_server` — safe file read/write with a command allowlist
 - `github_server` — git operations and GitHub PR creation
+- `pipeline_server` — drives the entire LangGraph pipeline end-to-end (start a migration from a repo URL, poll status, approve the plan, fetch the final report) so an external MCP client can run a full migration, not just call individual tools
 
-**Current state — Real MCP servers with stdio transport:** All five servers use `FastMCP` from the `mcp` SDK. Each server runs as a standalone subprocess communicating over stdio. They are registered in Claude Desktop's `claude_desktop_config.json` and verified working — Claude Desktop calls tools like `parse_file`, `check_syntax`, and `clone_repo` as real MCP tool calls.
+**Current state — Real MCP servers with stdio transport:** All six servers use `FastMCP` from the `mcp` SDK. Each server runs as a standalone subprocess communicating over stdio. They are registered in Claude Desktop's `claude_desktop_config.json` and verified working — Claude Desktop calls tools like `parse_file`, `check_syntax`, and `clone_repo` as real MCP tool calls.
+
+**`pipeline_server` specifically:** the other five servers expose atomic building blocks (parse this file, check this syntax, clone this repo). `pipeline_server` wraps the same compiled LangGraph `graph` the FastAPI service uses, so an agent like Claude Desktop can drive a whole migration through four tools — `start_migration`, `get_migration_status`, `approve_migration`, `get_migration_result` — instead of re-implementing the pipeline's sequencing itself. Each tool call returns immediately (the graph runs on a background thread) so a multi-minute conversion never blocks an MCP tool call or hits a client-side timeout; the caller polls `get_migration_status` for progress, exactly like the FastAPI job endpoints do.
 
 The graph nodes continue to call the same functions directly as Python imports (no overhead from going through the protocol for internal calls). The transport layer is an additional capability layered on top — it does not replace or change how the pipeline works internally.
 
@@ -290,7 +293,7 @@ The checkpoint store is used by a single process (the FastAPI server). It doesn'
 | **Graph Algorithms** | `dependency_graph.py` — topological sort, cycle detection, cycle breaking | Applied graph theory to a real engineering problem |
 | **REST API Design** | `routes.py` — 9 endpoints with clear semantics, proper HTTP status codes | FastAPI + auto-generated Swagger docs |
 | **Real-time Streaming** | `websockets.py` — per-job WebSocket rooms with asyncio queues | Bridges sync (LangGraph) and async (FastAPI) execution models |
-| **MCP / Tool Design** | Five real FastMCP servers with stdio transport, connected to and verified working in Claude Desktop | Full MCP stack — not just pattern, but working transport and live tool calls |
+| **MCP / Tool Design** | Six real FastMCP servers with stdio transport, connected to and verified working in Claude Desktop — including `pipeline_server`, which exposes the full LangGraph pipeline as four tools | Full MCP stack — not just pattern, but working transport, live tool calls, and end-to-end agentic orchestration |
 | **Containerisation** | `Dockerfile`, `docker-compose.yml` | Production-readiness, one-command setup |
 | **Python Async** | Thread-per-job model, `asyncio.run_coroutine_threadsafe`, queue draining | Deep Python concurrency — not just `async def` |
 
